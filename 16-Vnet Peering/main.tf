@@ -1,5 +1,5 @@
 variable "resource_group_name" {
-  default = "Vnet-peerning"
+  default = "Vnet-peering"
 }
 
 variable "location" {
@@ -62,18 +62,18 @@ resource "azurerm_public_ip" "public_ip" {
 
 # Set Up Peering
 resource "azurerm_virtual_network_peering" "vnet_peering_vnet1_to_vnet2" {
-  name                       = "VNet1-to-VNet2"
-  resource_group_name        = azurerm_resource_group.rg.name
-  virtual_network_name       = azurerm_virtual_network.vnet[0].name
-  remote_virtual_network_id  = azurerm_virtual_network.vnet[1].id
+  name                         = "VNet1-to-VNet2"
+  resource_group_name          = azurerm_resource_group.rg.name
+  virtual_network_name         = azurerm_virtual_network.vnet[0].name
+  remote_virtual_network_id    = azurerm_virtual_network.vnet[1].id
   allow_virtual_network_access = true
 }
 
 resource "azurerm_virtual_network_peering" "vnet_peering_vnet2_to_vnet1" {
-  name                       = "VNet2-to-VNet1"
-  resource_group_name        = azurerm_resource_group.rg.name
-  virtual_network_name       = azurerm_virtual_network.vnet[1].name
-  remote_virtual_network_id  = azurerm_virtual_network.vnet[0].id
+  name                         = "VNet2-to-VNet1"
+  resource_group_name          = azurerm_resource_group.rg.name
+  virtual_network_name         = azurerm_virtual_network.vnet[1].name
+  remote_virtual_network_id    = azurerm_virtual_network.vnet[0].id
   allow_virtual_network_access = true
 }
 
@@ -99,6 +99,8 @@ resource "azurerm_virtual_machine" "vm" {
   resource_group_name   = azurerm_resource_group.rg.name
   network_interface_ids = [azurerm_network_interface.nic[count.index].id]
   vm_size               = "Standard_B1s"
+
+  delete_os_disk_on_termination = true
 
   storage_image_reference {
     publisher = "Canonical"
