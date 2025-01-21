@@ -1,19 +1,45 @@
+variable "resource_group_name" {
+  default = "Vnet-peerning"
+}
+
+variable "location" {
+  default = "eastus"
+}
+
+variable "vnet_config" {
+  default = [
+    { name = "VNet1", address_space = "10.0.0.0/16", subnet_prefix = "10.0.1.0/24" },
+    { name = "VNet2", address_space = "10.1.0.0/16", subnet_prefix = "10.1.1.0/24" }
+  ]
+}
+
+terraform {
+  required_providers {
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = "~>3.6"
+    }
+  }
+}
+
 provider "azurerm" {
   features {}
+
 }
 
 # Create Resource Group
 resource "azurerm_resource_group" "rg" {
   name     = var.resource_group_name
   location = var.location
+
 }
 
 # Create VNets and Subnets
 resource "azurerm_virtual_network" "vnet" {
-  count              = length(var.vnet_config)
-  name               = var.vnet_config[count.index].name
-  address_space      = [var.vnet_config[count.index].address_space]
-  location           = azurerm_resource_group.rg.location
+  count               = length(var.vnet_config)
+  name                = var.vnet_config[count.index].name
+  address_space       = [var.vnet_config[count.index].address_space]
+  location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
 }
 
@@ -35,13 +61,19 @@ resource "azurerm_public_ip" "public_ip" {
 }
 
 # Set Up Peering
-resource "azurerm_virtual_network_peering" "vnet_peering" {
-  count = length(var.vnet_config) - 1
-  
-  name                       = "${azurerm_virtual_network.vnet[count.index].name}-to-${azurerm_virtual_network.vnet[count.index + 1].name}"
+resource "azurerm_virtual_network_peering" "vnet_peering_vnet1_to_vnet2" {
+  name                       = "VNet1-to-VNet2"
   resource_group_name        = azurerm_resource_group.rg.name
-  virtual_network_name       = azurerm_virtual_network.vnet[count.index].name
-  remote_virtual_network_id  = azurerm_virtual_network.vnet[count.index + 1].id
+  virtual_network_name       = azurerm_virtual_network.vnet[0].name
+  remote_virtual_network_id  = azurerm_virtual_network.vnet[1].id
+  allow_virtual_network_access = true
+}
+
+resource "azurerm_virtual_network_peering" "vnet_peering_vnet2_to_vnet1" {
+  name                       = "VNet2-to-VNet1"
+  resource_group_name        = azurerm_resource_group.rg.name
+  virtual_network_name       = azurerm_virtual_network.vnet[1].name
+  remote_virtual_network_id  = azurerm_virtual_network.vnet[0].id
   allow_virtual_network_access = true
 }
 
@@ -61,12 +93,12 @@ resource "azurerm_network_interface" "nic" {
 
 # Create Test VMs
 resource "azurerm_virtual_machine" "vm" {
-  count               = length(var.vnet_config)
-  name                = "testvm-${count.index}"
-  location            = azurerm_resource_group.rg.location
-  resource_group_name = azurerm_resource_group.rg.name
+  count                 = length(var.vnet_config)
+  name                  = "testvm-${count.index}"
+  location              = azurerm_resource_group.rg.location
+  resource_group_name   = azurerm_resource_group.rg.name
   network_interface_ids = [azurerm_network_interface.nic[count.index].id]
-  vm_size             = "Standard_B1s"
+  vm_size               = "Standard_B1s"
 
   storage_image_reference {
     publisher = "Canonical"
